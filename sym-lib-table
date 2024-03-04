@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name "car-logger-lib")(type "KiCad")(uri "${KIPRJMOD}/lib/car-logger-lib.kicad_sym")(options "")(descr ""))
+)
