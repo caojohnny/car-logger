@@ -664,10 +664,10 @@
       (reference "C30") (unit 1) (value "10u") (footprint "Capacitor_SMD:C_0603_1608Metric")
     )
     (path "/7f9c417e-e242-46d6-817e-ebb78cb79424/edccb659-50d4-4fb3-a78e-116f3a50ea85/dba4c824-9cb3-45cb-adeb-8c84d65b42b6"
-      (reference "C31") (unit 1) (value "47u") (footprint "Capacitor_SMD:C_0603_1608Metric")
+      (reference "C31") (unit 1) (value "47u") (footprint "Capacitor_SMD:C_1206_3216Metric")
     )
     (path "/7f9c417e-e242-46d6-817e-ebb78cb79424/edccb659-50d4-4fb3-a78e-116f3a50ea85/e0641d58-9bbe-43c4-a072-8ad619e4ba0b"
-      (reference "C32") (unit 1) (value "47u") (footprint "Capacitor_SMD:C_0603_1608Metric")
+      (reference "C32") (unit 1) (value "47u") (footprint "Capacitor_SMD:C_1206_3216Metric")
     )
     (path "/7f9c417e-e242-46d6-817e-ebb78cb79424/edccb659-50d4-4fb3-a78e-116f3a50ea85/5faf1d0a-ee19-4e50-b54a-72f5b8453068"
       (reference "C33") (unit 1) (value "10u") (footprint "Capacitor_SMD:C_0603_1608Metric")
