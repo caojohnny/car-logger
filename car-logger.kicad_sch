@@ -766,7 +766,7 @@
       (reference "L1") (unit 1) (value "4u7") (footprint "Inductor_SMD:L_1008_2520Metric")
     )
     (path "/021770ab-a17c-43ed-81a3-a4444d570b68/c2477a5a-221c-4970-aad4-c3752858f29c/5a64f82d-527f-4c27-aca2-243231ba0ec1"
-      (reference "Q1") (unit 1) (value "Q_NMOS_DGS") (footprint "Package_TO_SOT_SMD:SOT-23-3")
+      (reference "Q1") (unit 1) (value "Q_NMOS_GSD") (footprint "Package_TO_SOT_SMD:SOT-23-3")
     )
     (path "/7f9c417e-e242-46d6-817e-ebb78cb79424/3baab053-a3b5-4de3-9630-a73bea9f2f69"
       (reference "R1") (unit 1) (value "10k") (footprint "Resistor_SMD:R_0603_1608Metric")
