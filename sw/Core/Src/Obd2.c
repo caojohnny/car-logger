@@ -8,7 +8,7 @@ struct Obd2Data makeObd2Data(enum Obd2Mode mode, enum Obd2Pid pid)
         .mode = mode,
         .pid = pid,
         .n_abcd = 0,
-        .abcd = {0, 0, 0, 0}
+        .abcd = {0x00, 0x00, 0x00, 0x00}
     };
 
     return data;

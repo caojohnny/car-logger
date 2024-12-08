@@ -222,7 +222,7 @@ void SystemCoreClockUpdate (void)
 #endif /* STM32F042x6 || STM32F048xx || STM32F070x6 || 
           STM32F071xB || STM32F072xB || STM32F078xx || STM32F070xB ||
           STM32F091xC || STM32F098xx || STM32F030xC */
-	  }
+      }
       break;
     default: /* HSI used as system clock */
       SystemCoreClock = HSI_VALUE;

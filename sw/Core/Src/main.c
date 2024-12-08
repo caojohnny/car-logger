@@ -122,14 +122,11 @@ int main(void)
           Error_Handler();
       }
 
-      while (true)
+      uint8_t readData[ISO_TP_SF_SIZE];
+      bool wasReadSuccessful = canReceive(readData, ISO_TP_SF_SIZE);
+      if (wasReadSuccessful)
       {
-          uint8_t readData[ISO_TP_SF_SIZE];
-          bool wasReadSuccessful = canReceive(readData, ISO_TP_SF_SIZE);
-          if (wasReadSuccessful)
-          {
-              sleepMs(1000);
-          }
+          sleepMs(1000);
       }
 
       uint32_t newTick = HAL_GetTick();
@@ -169,12 +166,10 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL3;
-  RCC_OscInitStruct.PLL.PREDIV = RCC_PREDIV_DIV1;
+  RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -193,7 +188,7 @@ void SystemClock_Config(void)
     Error_Handler();
   }
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
-  PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL;
+  PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_HSI48;
 
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
@@ -217,15 +212,15 @@ static void MX_CAN_Init(void)
 
   /* USER CODE END CAN_Init 1 */
   hcan.Instance = CAN;
-  hcan.Init.Prescaler = 16;
+  hcan.Init.Prescaler = 4;
   hcan.Init.Mode = CAN_MODE_NORMAL;
   hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan.Init.TimeSeg1 = CAN_BS1_1TQ;
-  hcan.Init.TimeSeg2 = CAN_BS2_1TQ;
+  hcan.Init.TimeSeg1 = CAN_BS1_16TQ;
+  hcan.Init.TimeSeg2 = CAN_BS2_3TQ;
   hcan.Init.TimeTriggeredMode = DISABLE;
   hcan.Init.AutoBusOff = DISABLE;
-  hcan.Init.AutoWakeUp = DISABLE;
-  hcan.Init.AutoRetransmission = DISABLE;
+  hcan.Init.AutoWakeUp = ENABLE;
+  hcan.Init.AutoRetransmission = ENABLE;
   hcan.Init.ReceiveFifoLocked = DISABLE;
   hcan.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan) != HAL_OK)
