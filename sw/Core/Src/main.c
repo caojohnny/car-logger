@@ -47,8 +47,6 @@
 /* Private variables ---------------------------------------------------------*/
 CAN_HandleTypeDef hcan;
 
-PCD_HandleTypeDef hpcd_USB_FS;
-
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -57,7 +55,6 @@ PCD_HandleTypeDef hpcd_USB_FS;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_CAN_Init(void);
-static void MX_USB_PCD_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -97,13 +94,12 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_CAN_Init();
-  MX_USB_PCD_Init();
   /* USER CODE BEGIN 2 */
 
   HAL_StatusTypeDef initResult = canInit(&hcan);
   if (initResult != HAL_OK)
   {
-      Error_Handler();
+	  Error_Handler();
   }
 
   /* USER CODE END 2 */
@@ -116,39 +112,39 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-      bool hasRxError = canRxHasError();
-      if (hasRxError)
-      {
-          Error_Handler();
-      }
+	  bool hasRxError = canRxHasError();
+	  if (hasRxError)
+	  {
+		  Error_Handler();
+	  }
 
-      uint8_t readData[ISO_TP_SF_SIZE];
-      bool wasReadSuccessful = canReceive(readData, ISO_TP_SF_SIZE);
-      if (wasReadSuccessful)
-      {
-          sleepMs(1000);
-      }
+	  uint8_t readData[ISO_TP_SF_SIZE];
+	  bool wasReadSuccessful = canReceive(readData, ISO_TP_SF_SIZE);
+	  if (wasReadSuccessful)
+	  {
+		  sleepMs(1000);
+	  }
 
-      uint32_t newTick = HAL_GetTick();
-      uint32_t elapsed = newTick - currentTick;
-      int32_t remainingTick = MS_PER_TX - elapsed;
-      if (remainingTick > 0)
-      {
-          sleepMs(remainingTick);
-      }
+	  uint32_t newTick = HAL_GetTick();
+	  uint32_t elapsed = newTick - currentTick;
+	  int32_t remainingTick = MS_PER_TX - elapsed;
+	  if (remainingTick > 0)
+	  {
+		  sleepMs(remainingTick);
+	  }
 
-      struct Obd2Data obd2Data = makeObd2Data(OBD2MODE_CURRENT_DATA, OBD2PID_FUEL_TANK_LEVEL);
+	  struct Obd2Data obd2Data = makeObd2Data(OBD2MODE_CURRENT_DATA, OBD2PID_FUEL_TANK_LEVEL);
 
-      uint8_t packed[ISO_TP_SF_SIZE];
-      uint8_t dataLength = packObd2Data(packed, &obd2Data, ISO_TP_SF_SIZE);
+	  uint8_t packed[ISO_TP_SF_SIZE];
+	  packObd2Data(packed, &obd2Data, ISO_TP_SF_SIZE);
 
-      HAL_StatusTypeDef tx_result = canTransmit(&hcan, CAN_ID_FUNC_ADDR, packed, dataLength);
-      if (tx_result != HAL_OK)
-      {
-          Error_Handler();
-      }
+	  HAL_StatusTypeDef tx_result = canTransmit(&hcan, CAN_ID_FUNC_ADDR, packed, ISO_TP_SF_SIZE);
+	  if (tx_result != HAL_OK)
+	  {
+		  Error_Handler();
+	  }
 
-      currentTick = newTick;
+	  currentTick = newTick;
   }
   /* USER CODE END 3 */
 }
@@ -161,14 +157,12 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48|RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-  RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -184,13 +178,6 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
-  PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_HSI48;
-
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
   }
@@ -212,15 +199,15 @@ static void MX_CAN_Init(void)
 
   /* USER CODE END CAN_Init 1 */
   hcan.Instance = CAN;
-  hcan.Init.Prescaler = 4;
-  hcan.Init.Mode = CAN_MODE_NORMAL;
+  hcan.Init.Prescaler = 6;
+  hcan.Init.Mode = CAN_MODE_LOOPBACK;
   hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan.Init.TimeSeg1 = CAN_BS1_16TQ;
-  hcan.Init.TimeSeg2 = CAN_BS2_3TQ;
+  hcan.Init.TimeSeg2 = CAN_BS2_8TQ;
   hcan.Init.TimeTriggeredMode = DISABLE;
   hcan.Init.AutoBusOff = DISABLE;
-  hcan.Init.AutoWakeUp = ENABLE;
-  hcan.Init.AutoRetransmission = ENABLE;
+  hcan.Init.AutoWakeUp = DISABLE;
+  hcan.Init.AutoRetransmission = DISABLE;
   hcan.Init.ReceiveFifoLocked = DISABLE;
   hcan.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan) != HAL_OK)
@@ -230,38 +217,6 @@ static void MX_CAN_Init(void)
   /* USER CODE BEGIN CAN_Init 2 */
 
   /* USER CODE END CAN_Init 2 */
-
-}
-
-/**
-  * @brief USB Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USB_PCD_Init(void)
-{
-
-  /* USER CODE BEGIN USB_Init 0 */
-
-  /* USER CODE END USB_Init 0 */
-
-  /* USER CODE BEGIN USB_Init 1 */
-
-  /* USER CODE END USB_Init 1 */
-  hpcd_USB_FS.Instance = USB;
-  hpcd_USB_FS.Init.dev_endpoints = 8;
-  hpcd_USB_FS.Init.speed = PCD_SPEED_FULL;
-  hpcd_USB_FS.Init.phy_itface = PCD_PHY_EMBEDDED;
-  hpcd_USB_FS.Init.low_power_enable = DISABLE;
-  hpcd_USB_FS.Init.lpm_enable = DISABLE;
-  hpcd_USB_FS.Init.battery_charging_enable = DISABLE;
-  if (HAL_PCD_Init(&hpcd_USB_FS) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USB_Init 2 */
-
-  /* USER CODE END USB_Init 2 */
 
 }
 

@@ -6,8 +6,8 @@
 
 enum CanId
 {
-    /// Functional addressing. Addresses all ECUs.
-    CAN_ID_FUNC_ADDR = 0x7DF
+	/// Functional addressing. Addresses all ECUs.
+	CAN_ID_FUNC_ADDR = 0x7DF
 };
 
 bool canRxHasError();

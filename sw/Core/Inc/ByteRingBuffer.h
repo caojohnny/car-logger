@@ -6,12 +6,12 @@
 
 struct ByteRingBuffer
 {
-    uint8_t* backing;
-    uint16_t length;
+	uint8_t* backing;
+	uint16_t length;
 
-    uint16_t writerIndex;
-    uint16_t readerIndex;
-    uint16_t size;
+	uint16_t writerIndex;
+	uint16_t readerIndex;
+	uint16_t size;
 };
 
 void byteRingBufferInit(struct ByteRingBuffer* buffer, uint8_t* backing, uint16_t length);
