@@ -36,6 +36,11 @@ bool byteRingBufferAdd(struct ByteRingBuffer* buffer, uint8_t* source, uint16_t 
 	memcpy(buffer->backing + buffer->writerIndex, source, numToEnd);
 	buffer->writerIndex += numToEnd;
 
+	if (buffer->writerIndex == buffer->length)
+	{
+		buffer->writerIndex = 0;
+	}
+
 	if (length > 0)
 	{
 		memcpy(buffer->backing + buffer->writerIndex, source + numToEnd, length);
@@ -67,6 +72,11 @@ bool byteRingBufferRemove(struct ByteRingBuffer* buffer, uint8_t* dest, uint16_t
 
 	memcpy(dest, buffer->backing + buffer->readerIndex, numToEnd);
 	buffer->readerIndex += numToEnd;
+
+	if (buffer->readerIndex == buffer->length)
+	{
+		buffer->readerIndex = 0;
+	}
 
 	if (length > 0)
 	{

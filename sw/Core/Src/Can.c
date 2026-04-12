@@ -30,6 +30,7 @@ HAL_StatusTypeDef canTransmit(CAN_HandleTypeDef* canHandle, enum CanId target, c
 {
 	CAN_TxHeaderTypeDef header;
 	header.StdId = (uint32_t) target;
+	header.ExtId = 0;
 	header.IDE = CAN_ID_STD;
 	header.RTR = CAN_RTR_DATA;
 	header.DLC = dataLength;
@@ -43,7 +44,6 @@ HAL_StatusTypeDef canTransmit(CAN_HandleTypeDef* canHandle, enum CanId target, c
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *canHandle)
 {
-
 	// Avoid masking an error
 	if (rxError)
 	{
@@ -63,10 +63,10 @@ HAL_StatusTypeDef canInit(CAN_HandleTypeDef* canHandle)
 	rxError = false;
 
 	CAN_FilterTypeDef sf;
-	sf.FilterIdHigh = 0x0000;
-	sf.FilterIdLow = 0x0000;
-    sf.FilterMaskIdHigh = 0x0000;
-    sf.FilterMaskIdLow = 0x0000;
+    sf.FilterIdHigh = 0x7E8 << 5;
+	sf.FilterIdLow = 0x0;
+	sf.FilterMaskIdHigh = 0x7F0 << 5;
+	sf.FilterMaskIdLow = 0x0;
     sf.FilterFIFOAssignment = CAN_SELECTED_FIFO;
     sf.FilterBank = 0;
     sf.FilterMode = CAN_FILTERMODE_IDMASK;

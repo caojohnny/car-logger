@@ -8,7 +8,7 @@ struct Obd2Data makeObd2Data(enum Obd2Mode mode, enum Obd2Pid pid)
 		.mode = mode,
 		.pid = pid,
 		.n_abcd = 0,
-		.abcd = {0xAA, 0xAA, 0xAA, 0xAA}
+		.abcd = {0x0, 0x0, 0x0, 0x0}
 	};
 
 	return data;
@@ -32,5 +32,18 @@ void packObd2Data(uint8_t* packed, const struct Obd2Data* data, uint8_t packedLe
 	for (uint8_t i = 3; i <= 6; ++i)
 	{
 		packed[i] = data->abcd[i - 3];
+	}
+	packed[7] = 0x0;
+}
+
+void parseObd2Data(struct Obd2Data* data, const uint8_t* packed, uint8_t length)
+{
+	assert(length >= ISO_TP_SF_SIZE);
+
+	data->mode = (enum Obd2Mode) packed[1];
+	data->pid = (enum Obd2Pid) packed[2];
+	for (uint8_t i = 3; i <= 6; ++i)
+	{
+		data->abcd[i - 3] = packed[i];
 	}
 }

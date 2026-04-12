@@ -29,4 +29,6 @@ struct Obd2Data makeObd2Data(enum Obd2Mode mode, enum Obd2Pid pid);
 
 void packObd2Data(uint8_t* packed, const struct Obd2Data* data, uint8_t packedLength);
 
+void parseObd2Data(struct Obd2Data* data, const uint8_t* packed, uint8_t length);
+
 #endif // OBD_H
