@@ -36,7 +36,8 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-
+extern CAN_HandleTypeDef hcan;
+extern SPI_HandleTypeDef hspi1;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -57,6 +58,8 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define FLASH_CS_Pin GPIO_PIN_3
+#define FLASH_CS_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
 

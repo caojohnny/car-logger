@@ -8,7 +8,7 @@
 #define CAN_RX_SIZE (8U)
 
 /// The size of the CAN RX backing buffer
-#define CAN_RX_BUFFER_SIZE (1024U)
+#define CAN_RX_BUFFER_SIZE (128U)
 /// Backing data for the ring buffer
 static uint8_t rxBufferBacking[CAN_RX_BUFFER_SIZE];
 /// The CAN RX buffer containing all read data

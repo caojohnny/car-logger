@@ -2,17 +2,22 @@
 #define FLASH_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
-struct flash_info
+struct FlashInfo
 {
+	uint32_t writerAddress;
+	uint32_t flashLength;
 };
 
-struct flash_data_value
-{
-};
+bool flashInit(struct FlashInfo* info);
 
-bool flash_init(struct flash_info* info);
+bool flashIsIdle(struct FlashInfo* info);
 
-bool flash_log_data(struct flash_info* info, const struct flash_data_value* data);
+bool flashClearMemory(struct FlashInfo* info);
+
+bool flashLogData(struct FlashInfo* info, uint8_t* src, uint16_t len);
+
+bool flashReadData(struct FlashInfo* info, uint32_t address, uint8_t* dest, uint16_t len);
 
 #endif // FLASH_H
