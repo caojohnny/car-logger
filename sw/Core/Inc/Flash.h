@@ -10,7 +10,7 @@ struct FlashInfo
 	uint32_t flashLength;
 };
 
-bool flashInit(struct FlashInfo* info);
+bool flashInit(struct FlashInfo* info, uint8_t* workingMemory, uint16_t minFreeBlockSz);
 
 bool flashIsIdle(struct FlashInfo* info);
 

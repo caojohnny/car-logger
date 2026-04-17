@@ -5,6 +5,7 @@
 #include <Flash.h>
 #include <Obd2.h>
 #include <IsoTp.h>
+#include <Sleep.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -15,6 +16,7 @@ struct FlashInfo flashMemory;
 uint8_t serialRxBacking[SERIAL_RX_BUFFER_SZ];
 struct ByteRingBuffer serialRx;
 
+#define MIN_FREE_BLOCK_SZ (11U)
 struct __attribute__((__packed__)) CollectedData
 {
 	uint32_t time;
@@ -22,14 +24,40 @@ struct __attribute__((__packed__)) CollectedData
 	uint8_t vehicleSpeed;
 	uint8_t throttlePosition;
 	uint8_t tankLevel;
-	uint16_t fuelLevel;
+	uint16_t fuelRate;
 };
 
+#define START_DELIMITER ("START>")
+#define END_DELIMITER ("<END")
 #define SERIAL_TX_SZ (128U)
+
+#define PIDS_TO_REQUEST_SZ (5U)
+static enum Obd2Pid PIDS_TO_REQUEST[PIDS_TO_REQUEST_SZ] = {
+	OBD2PID_ENGINE_SPEED,
+	OBD2PID_VEHICLE_SPEED,
+	OBD2PID_THROTTLE_POSITION,
+	OBD2PID_FUEL_TANK_LEVEL,
+	OBD2PID_ENGINE_FUEL_RATE
+};
+
+bool loggingEnabled = true;
 
 void initSerial()
 {
 	byteRingBufferInit(&serialRx, serialRxBacking, SERIAL_RX_BUFFER_SZ);
+}
+
+static bool isCommand(char* commandString, char* expectedCommand, int len)
+{
+	return len > strlen(expectedCommand) && strncmp(commandString, expectedCommand, len - 1) == 0;
+}
+
+static void transmitBuffer(void* ptr, int len)
+{
+	while (CDC_Transmit_FS(ptr, len))
+	{
+		sleepMs(1);
+	}
 }
 
 void stepSerial()
@@ -57,26 +85,44 @@ void stepSerial()
 			char commandString[SERIAL_RX_BUFFER_SZ];
 			byteRingBufferRemove(&serialRx, (uint8_t*) commandString, commandLen);
 
-			if (strcmp(commandString, "clear\r") == 0)
+			if (isCommand(commandString, "clear", commandLen))
 			{
+				// Prevents us from writing cleared memory
+				loggingEnabled = false;
+
 				printf("Clearing memory, please wait.\r\n");
 				uint32_t start = HAL_GetTick();
 				flashClearMemory(&flashMemory);
 				uint32_t end = HAL_GetTick();
 
 				printf("Done clearing memory (elapsed time = %ld ms)\r\n", (end - start));
-			}
-			else if (strcmp(commandString, "download\r\3") == 0)
-			{
-				printf("START>");
-				for (int i = 0; i < flashMemory.flashLength; i += SERIAL_TX_SZ)
-				{
-					uint8_t tempBuffer[SERIAL_TX_SZ];
-					flashReadData(&flashMemory, i, tempBuffer, SERIAL_TX_SZ);
 
-					CDC_Transmit_FS(tempBuffer, SERIAL_TX_SZ);
+				loggingEnabled = true;
+			}
+			else if (isCommand(commandString, "download", commandLen))
+			{
+				// Prevents us from reading forever
+				loggingEnabled = false;
+
+				transmitBuffer(START_DELIMITER, strlen(START_DELIMITER));
+				uint32_t maxAvailableData = flashMemory.writerAddress;
+				for (int i = 0; i < maxAvailableData; i += SERIAL_TX_SZ)
+				{
+					uint16_t readLength = SERIAL_TX_SZ;
+					uint32_t maxRemaining = maxAvailableData - i;
+					if (maxRemaining < readLength)
+					{
+						readLength = (uint16_t) maxRemaining;
+					}
+
+					uint8_t tempBuffer[SERIAL_TX_SZ];
+					flashReadData(&flashMemory, i, tempBuffer, readLength);
+
+					transmitBuffer(tempBuffer, readLength);
 				}
-				printf("<END");
+				transmitBuffer(END_DELIMITER, strlen(END_DELIMITER));
+
+				loggingEnabled = true;
 			}
 			else
 			{
@@ -88,11 +134,16 @@ void stepSerial()
 
 void initDataCollection()
 {
-	bool rc = flashInit(&flashMemory);
+	assert(MIN_FREE_BLOCK_SZ == sizeof(struct CollectedData));
+
+	uint8_t flashInitWorkingMemory[MIN_FREE_BLOCK_SZ];
+	bool rc = flashInit(&flashMemory, flashInitWorkingMemory, MIN_FREE_BLOCK_SZ);
 	if (!rc)
 	{
 		Error_Handler();
 	}
+
+	printf("Finished flash initialization (start = %ld)\r\n", flashMemory.writerAddress);
 
 	HAL_StatusTypeDef initResult = canInit(&hcan);
 	if (initResult != HAL_OK)
@@ -110,31 +161,65 @@ void stepDataCollection()
 	}
 
 	// TX data requests
-	struct Obd2Data obd2Data = makeObd2Data(OBD2MODE_CURRENT_DATA, OBD2PID_ENGINE_SPEED);
-
-	uint8_t packed[ISO_TP_SF_SIZE];
-	packObd2Data(packed, &obd2Data, ISO_TP_SF_SIZE);
-
-	HAL_StatusTypeDef tx_result = canTransmit(&hcan, CAN_ID_FUNC_ADDR, packed, ISO_TP_SF_SIZE);
-	if (tx_result != HAL_OK)
+	for (int i = 0; i < PIDS_TO_REQUEST_SZ; ++i)
 	{
-		Error_Handler();
+		struct Obd2Data obd2Data = makeObd2Data(OBD2MODE_CURRENT_DATA, PIDS_TO_REQUEST[i]);
+
+		uint8_t packed[ISO_TP_SF_SIZE];
+		packObd2Data(packed, &obd2Data, ISO_TP_SF_SIZE);
+
+		HAL_StatusTypeDef tx_result = canTransmit(&hcan, CAN_ID_FUNC_ADDR, packed, ISO_TP_SF_SIZE);
+		if (tx_result != HAL_OK)
+		{
+			// TODO: Uncomment
+			// Error_Handler();
+		}
 	}
 
 	// RX data requests
-	struct CollectedData data = {0};
+	bool receivedResponse = false;
 
+	struct Obd2Data obd2Data;
+	struct CollectedData collectedData;
 	uint8_t readData[ISO_TP_SF_SIZE];
 	while (canReceive(readData, ISO_TP_SF_SIZE))
 	{
-		parseObd2Data(&obd2Data, readData, ISO_TP_SF_SIZE);
+		receivedResponse = true;
 
+		parseObd2Data(&obd2Data, readData, ISO_TP_SF_SIZE);
 		if (obd2Data.mode == 0x40 + OBD2MODE_CURRENT_DATA)
 		{
-			// TODO: Populate data
+			if (obd2Data.pid == OBD2PID_ENGINE_SPEED)
+			{
+				collectedData.engineSpeed = (((uint16_t) obd2Data.abcd[0]) << 8) | (obd2Data.abcd[1]);
+			}
+			else if (obd2Data.pid == OBD2PID_VEHICLE_SPEED)
+			{
+				collectedData.vehicleSpeed = obd2Data.abcd[0];
+			}
+			else if (obd2Data.pid == OBD2PID_THROTTLE_POSITION)
+			{
+				collectedData.throttlePosition = obd2Data.abcd[0];
+			}
+			else if (obd2Data.pid == OBD2PID_FUEL_TANK_LEVEL)
+			{
+				collectedData.tankLevel = obd2Data.abcd[0];
+			}
+			else if (obd2Data.pid == OBD2PID_ENGINE_FUEL_RATE)
+			{
+				collectedData.fuelRate = (((uint16_t) obd2Data.abcd[0]) << 8) | (obd2Data.abcd[1]);
+			}
+			else
+			{
+				Error_Handler();
+			}
 		}
 	}
 
 	// Data logging
-	flashLogData(&flashMemory, (uint8_t*) &data, sizeof(data));
+	if (receivedResponse && loggingEnabled)
+	{
+		collectedData.time = HAL_GetTick();
+		flashLogData(&flashMemory, (uint8_t*) &collectedData, sizeof(collectedData));
+	}
 }

@@ -5,22 +5,45 @@
 
 #define SPI_TIMEOUT_TICKS (1000U)
 #define PAGE_SZ (256U)
-#define FLASH_SZ (256U * 1024U * 1024U);
+#define FLASH_SZ (256U * 1024U * 1024U)
 
-static void flashWriteEnable()
+static uint32_t flashFindFirstAddress(uint8_t* workingMemory, uint16_t minFreeBlockSz)
 {
 	HAL_GPIO_WritePin(FLASH_CS_GPIO_Port, FLASH_CS_Pin, GPIO_PIN_RESET);
 
-	uint8_t command[2] = {0x06};
-	HAL_SPI_Transmit(&hspi1, command, 1, SPI_TIMEOUT_TICKS);
+	uint8_t command[5] = {0x13, 0, 0, 0, 0};
+	HAL_SPI_Transmit(&hspi1, command, 5, SPI_TIMEOUT_TICKS);
+
+	uint32_t freeAddress = FLASH_SZ;
+	for (int i = 0; i < FLASH_SZ; i += minFreeBlockSz)
+	{
+		HAL_SPI_Receive(&hspi1, workingMemory, minFreeBlockSz, SPI_TIMEOUT_TICKS);
+
+		bool isFree = true;
+		for (int j = 0; j < minFreeBlockSz; ++j)
+		{
+			if (workingMemory[j] != 0xFF)
+			{
+				isFree = false;
+				break;
+			}
+		}
+
+		if (isFree)
+		{
+			freeAddress = i;
+			break;
+		}
+	}
 
 	HAL_GPIO_WritePin(FLASH_CS_GPIO_Port, FLASH_CS_Pin, GPIO_PIN_SET);
+
+	return freeAddress;
 }
 
-bool flashInit(struct FlashInfo* info)
+bool flashInit(struct FlashInfo* info, uint8_t* workingMemory, uint16_t minFreeBlockSz)
 {
-	// TODO
-	info->writerAddress = 0U;
+	info->writerAddress = flashFindFirstAddress(workingMemory, minFreeBlockSz);
 
 	info->flashLength = FLASH_SZ;
 
@@ -48,6 +71,16 @@ static void flashWaitUntilIdle(struct FlashInfo* info)
 	while (!flashIsIdle(info))
 	{
 	}
+}
+
+static void flashWriteEnable()
+{
+	HAL_GPIO_WritePin(FLASH_CS_GPIO_Port, FLASH_CS_Pin, GPIO_PIN_RESET);
+
+	uint8_t command[2] = {0x06};
+	HAL_SPI_Transmit(&hspi1, command, 1, SPI_TIMEOUT_TICKS);
+
+	HAL_GPIO_WritePin(FLASH_CS_GPIO_Port, FLASH_CS_Pin, GPIO_PIN_SET);
 }
 
 bool flashClearMemory(struct FlashInfo* info)

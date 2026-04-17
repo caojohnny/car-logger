@@ -100,6 +100,9 @@ int main(void)
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
 
+  // Wait for serial
+  sleepMs(2000);
+
   initSerial();
   initDataCollection();
 
@@ -129,6 +132,9 @@ int main(void)
 	  }
 
 	  currentTick = HAL_GetTick();
+
+	  // Performance metrics
+	  // printf("Elapsed time: %ld\r\n", elapsed);
   }
   /* USER CODE END 3 */
 }
