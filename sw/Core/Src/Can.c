@@ -65,7 +65,7 @@ HAL_StatusTypeDef canInit(CAN_HandleTypeDef* canHandle)
 	CAN_FilterTypeDef sf;
     sf.FilterIdHigh = 0x7E8 << 5;
 	sf.FilterIdLow = 0x0;
-	sf.FilterMaskIdHigh = 0x7F0 << 5;
+	sf.FilterMaskIdHigh = 0x7FF << 5;
 	sf.FilterMaskIdLow = 0x0;
     sf.FilterFIFOAssignment = CAN_SELECTED_FIFO;
     sf.FilterBank = 0;
