@@ -39,6 +39,9 @@ static enum Obd2Pid PIDS_TO_REQUEST[PIDS_TO_REQUEST_SZ] = {
 	OBD2PID_FUEL_TANK_LEVEL,
 	OBD2PID_ENGINE_FUEL_RATE
 };
+static uint16_t pidIndex = 0;
+
+struct CollectedData collectedData;
 
 bool loggingEnabled = true;
 
@@ -161,31 +164,19 @@ void stepDataCollection()
 	}
 
 	// TX data requests
-	for (int i = 0; i < PIDS_TO_REQUEST_SZ; ++i)
-	{
-		struct Obd2Data obd2Data = makeObd2Data(OBD2MODE_CURRENT_DATA, PIDS_TO_REQUEST[i]);
+	struct Obd2Data obd2Data = makeObd2Data(OBD2MODE_CURRENT_DATA, PIDS_TO_REQUEST[pidIndex]);
 
-		uint8_t packed[ISO_TP_SF_SIZE];
-		packObd2Data(packed, &obd2Data, ISO_TP_SF_SIZE);
+	uint8_t packed[ISO_TP_SF_SIZE];
+	packObd2Data(packed, &obd2Data, ISO_TP_SF_SIZE);
 
-		HAL_StatusTypeDef tx_result = canTransmit(&hcan, CAN_ID_FUNC_ADDR, packed, ISO_TP_SF_SIZE);
-		if (tx_result != HAL_OK)
-		{
-			// TODO: Uncomment
-			// Error_Handler();
-		}
-	}
+	HAL_StatusTypeDef txResult = canTransmit(&hcan, CAN_ID_FUNC_ADDR, packed, ISO_TP_SF_SIZE);
+	bool hasCanConnection = txResult == HAL_OK;
 
 	// RX data requests
-	bool receivedResponse = false;
-
-	struct Obd2Data obd2Data;
-	struct CollectedData collectedData;
 	uint8_t readData[ISO_TP_SF_SIZE];
 	while (canReceive(readData, ISO_TP_SF_SIZE))
 	{
-		receivedResponse = true;
-
+		struct Obd2Data obd2Data;
 		parseObd2Data(&obd2Data, readData, ISO_TP_SF_SIZE);
 		if (obd2Data.mode == 0x40 + OBD2MODE_CURRENT_DATA)
 		{
@@ -216,8 +207,15 @@ void stepDataCollection()
 		}
 	}
 
+	pidIndex++;
+	bool hasLoggedAllPids = (pidIndex == PIDS_TO_REQUEST_SZ);
+	if (hasLoggedAllPids)
+	{
+		pidIndex = 0;
+	}
+
 	// Data logging
-	if (receivedResponse && loggingEnabled)
+	if (loggingEnabled && hasCanConnection && hasLoggedAllPids)
 	{
 		collectedData.time = HAL_GetTick();
 		flashLogData(&flashMemory, (uint8_t*) &collectedData, sizeof(collectedData));
